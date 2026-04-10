@@ -4,6 +4,7 @@ import { auth } from './firebase';
 import Login from './Login';
 import WeekMenuPlanner from './WeekMenuPlanner';
 import './App.css';
+
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,14 +17,6 @@ function App() {
 
     return () => unsubscribe();
   }, []);
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
   if (loading) {
     return (
@@ -39,11 +32,12 @@ function App() {
   return (
     <>
       {user ? (
-  <WeekMenuPlanner userId={user.uid} userEmail={user.email} />
-) : (
+        <WeekMenuPlanner userId={user.uid} userEmail={user.email} />
+      ) : (
         <Login />
       )}
     </>
   );
 }
+
 export default App;
