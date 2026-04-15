@@ -395,16 +395,8 @@ const familyId = userId;
   };
 
   const addFromPreset = (preset) => {
-    const newItem = {
-      id: Date.now(),
-      naam: preset.naam,
-      hoeveelheid: '',
-      eenheid: '',
-      categorie: preset.categorie,
-      winkel: preset.winkel
-    };
-    setExtraBoodschappen([...extraBoodschappen, newItem]);
-    setShowAddBoodschap(false);
+    setNieuweBoodschap({ naam: preset.naam, categorie: preset.categorie, winkel: preset.winkel });
+    setCustomInput(true);
   };
 
   const verwijderBoodschap = (key) => {
@@ -428,7 +420,7 @@ const familyId = userId;
   };
 
   const updateExtraBoodschap = (id, field, value) => {
-    setExtraBoodschappen(extraBoodschappen.map(item =>
+    setExtraBoodschappen(prev => prev.map(item =>
       item.id === id ? { ...item, [field]: value } : item
     ));
   };
@@ -933,26 +925,7 @@ const familyId = userId;
           </div>
         </div>
 
-        {totaalItems === 0 ? (
-          <div className="bg-amber-50 border border-amber-100 rounded-2xl p-8 text-center">
-            <p className="text-amber-700 text-sm">Plan eerst je weekmenu om een boodschappenlijst te genereren.</p>
-          </div>
-        ) : (
-          <>
-            <div className="bg-white p-4 rounded-2xl border border-gray-100">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-600">Voortgang</span>
-                <span className="text-sm font-semibold text-emerald-600">{afgevinkt} / {totaalItems}</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-1.5">
-                <div
-                  className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
-                  style={{ width: `${totaalItems > 0 ? (afgevinkt / totaalItems) * 100 : 0}%` }}
-                ></div>
-              </div>
-            </div>
-
-            {showAddBoodschap && (
+        {showAddBoodschap && (
               <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-semibold text-lg">Extra Boodschap Toevoegen</h3>
@@ -1055,7 +1028,26 @@ const familyId = userId;
                   </div>
                 )}
               </div>
-            )}
+        )}
+
+        {totaalItems === 0 ? (
+          <div className="bg-amber-50 border border-amber-100 rounded-2xl p-8 text-center">
+            <p className="text-amber-700 text-sm">Plan je weekmenu of voeg extra items toe via de knop hierboven.</p>
+          </div>
+        ) : (
+          <>
+            <div className="bg-white p-4 rounded-2xl border border-gray-100">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-600">Voortgang</span>
+                <span className="text-sm font-semibold text-emerald-600">{afgevinkt} / {totaalItems}</span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-1.5">
+                <div
+                  className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
+                  style={{ width: `${totaalItems > 0 ? (afgevinkt / totaalItems) * 100 : 0}%` }}
+                ></div>
+              </div>
+            </div>
 
             <div className="space-y-4">
               {boodschappenWeergave === 'categorie' ? (
@@ -1089,12 +1081,21 @@ const familyId = userId;
                               
                               {isEditingThis ? (
                                 <>
-                                  <input
-                                    type="text"
-                                    value={item.naam}
-                                    onChange={(e) => updateExtraBoodschap(item.id, 'naam', e.target.value)}
-                                    className="flex-1 px-2 py-1 border border-gray-200 rounded-lg text-sm"
-                                  />
+                                  <div className="flex-1 flex flex-col gap-1">
+                                    <input
+                                      type="text"
+                                      value={item.naam}
+                                      onChange={(e) => updateExtraBoodschap(item.id, 'naam', e.target.value)}
+                                      className="w-full px-2 py-1 border border-gray-200 rounded-lg text-sm"
+                                    />
+                                    <select
+                                      value={item.winkel || 'Appie'}
+                                      onChange={(e) => updateExtraBoodschap(item.id, 'winkel', e.target.value)}
+                                      className="w-full px-2 py-1 border border-gray-200 rounded-lg text-sm"
+                                    >
+                                      {winkels.map(w => <option key={w} value={w}>{w}</option>)}
+                                    </select>
+                                  </div>
                                   <button
                                     onClick={() => setEditingBoodschapKey(null)}
                                     className="text-green-600 hover:text-green-700 text-xs px-2"
@@ -1112,14 +1113,27 @@ const familyId = userId;
                                       </span>
                                     )}
                                   </span>
-                                  <span className={`text-xs px-2 py-1 rounded ${
-                                    item.winkel === 'Visboer' ? 'bg-blue-100 text-blue-700' :
-                                    item.winkel === 'Slager' ? 'bg-red-100 text-red-700' :
-                                    item.winkel === 'Netto' ? 'bg-yellow-100 text-yellow-700' :
-                                    'bg-green-100 text-green-700'
-                                  }`}>
-                                    {item.winkel || 'Appie'}
-                                  </span>
+                                  {item.bron === 'extra' ? (
+                                    <select
+                                      value={item.winkel || 'Appie'}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        updateExtraBoodschap(item.id, 'winkel', e.target.value);
+                                      }}
+                                      className="text-xs px-2 py-1 rounded border border-gray-200 bg-white cursor-pointer"
+                                    >
+                                      {winkels.map(w => <option key={w} value={w}>{w}</option>)}
+                                    </select>
+                                  ) : (
+                                    <span className={`text-xs px-2 py-1 rounded ${
+                                      item.winkel === 'Visboer' ? 'bg-blue-100 text-blue-700' :
+                                      item.winkel === 'Slager' ? 'bg-red-100 text-red-700' :
+                                      item.winkel === 'Netto' ? 'bg-yellow-100 text-yellow-700' :
+                                      'bg-green-100 text-green-700'
+                                    }`}>
+                                      {item.winkel || 'Appie'}
+                                    </span>
+                                  )}
                                 </>
                               )}
                               
@@ -1228,6 +1242,7 @@ const familyId = userId;
       </div>
     );
   };
+
 
   return (
     <div className="min-h-screen bg-stone-50 p-4">
