@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './Firebase';
 import Login from './Login';
 import WeekMenuPlanner from './WeekMenuPlanner';
 import './App.css';
@@ -20,10 +20,10 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Laden...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500 mx-auto mb-3"></div>
+          <p className="text-gray-400 text-sm">Laden...</p>
         </div>
       </div>
     );

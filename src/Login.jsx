@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { auth } from './Firebase';
 
 const Login = () => {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [familyName, setFamilyName] = useState('');
-  const [familyCode, setFamilyCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -19,18 +16,8 @@ const Login = () => {
 
     try {
       if (isRegister) {
-        // Register new family
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
-        // Create family document
-        await setDoc(doc(db, 'families', userCredential.user.uid), {
-          familyName,
-          familyCode: familyCode.toUpperCase(),
-          createdAt: new Date().toISOString(),
-          members: [email]
-        });
+        await createUserWithEmailAndPassword(auth, email, password);
       } else {
-        // Login
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (err) {
@@ -41,75 +28,45 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
-          🍽️ Weekmenu Planner v2
-        </h1>
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 max-w-md w-full">
+        <div className="text-center mb-8">
+          <div className="text-5xl mb-3">🍽️</div>
+          <h1 className="text-2xl font-bold text-gray-900">Weekmenu Planner</h1>
+          <p className="text-sm text-gray-500 mt-1">Plan je week, shop eenvoudig</p>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isRegister && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Familie Naam
-                </label>
-                <input
-                  type="text"
-                  value={familyName}
-                  onChange={(e) => setFamilyName(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="bijv. Familie van Sjoerd"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Familie Code
-                </label>
-                <input
-                  type="text"
-                  value={familyCode}
-                  onChange={(e) => setFamilyCode(e.target.value.toUpperCase())}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="bijv. SJOERD2024"
-                  required
-                />
-              </div>
-            </>
-          )}
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Email
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm"
               placeholder="jouw@email.nl"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Wachtwoord
             </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm"
               placeholder="••••••••"
               required
             />
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
               {error}
             </div>
           )}
@@ -117,20 +74,22 @@ const Login = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:bg-gray-400"
+            className="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-semibold hover:bg-emerald-700 active:bg-emerald-800 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-sm mt-2"
           >
-            {loading ? 'Bezig...' : (isRegister ? 'Registreren' : 'Inloggen')}
+            {loading ? 'Bezig...' : (isRegister ? 'Account aanmaken' : 'Inloggen')}
           </button>
         </form>
 
-        <button
-          onClick={() => setIsRegister(!isRegister)}
-          className="w-full mt-4 text-blue-600 hover:text-blue-700 text-sm"
-        >
-          {isRegister
-            ? 'Heb je al een account? Log in'
-            : 'Nog geen account? Registreer'}
-        </button>
+        <div className="mt-6 pt-5 border-t border-gray-100 text-center">
+          <button
+            onClick={() => setIsRegister(!isRegister)}
+            className="text-emerald-600 hover:text-emerald-700 text-sm font-medium transition-colors"
+          >
+            {isRegister
+              ? 'Heb je al een account? Log in'
+              : 'Nog geen account? Registreer je'}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,26 +1,26 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, ShoppingCart, ChefHat, Calendar, LogOut } from 'lucide-react';
 import { signOut } from 'firebase/auth';
-import { 
-  collection, 
-  doc, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
+import {
+  collection,
+  doc,
+  onSnapshot,
+  addDoc,
+  updateDoc,
   deleteDoc,
-  setDoc,
-  getDoc
+  setDoc
 } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { auth, db } from './Firebase';
 
-const WeekMenuPlanner = ({ userId, userEmail }) => {
-  console.log('WeekMenuPlanner props:', { userId, userEmail });
+const WeekMenuPlanner = ({ userId }) => {
   const [gerechten, setGerechten] = useState([]);
   const [weekMenu, setWeekMenu] = useState({});
   const [activeTab, setActiveTab] = useState('menu');
   const [showAddGerecht, setShowAddGerecht] = useState(false);
   const [editingGerechtId, setEditingGerechtId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+  const [gerechtError, setGerechtError] = useState('');
  
   
   const [nieuwGerecht, setNieuwGerecht] = useState({
@@ -157,37 +157,42 @@ const familyId = userId;
     return 'Appie';
   };
 
+  const showToast = (message) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 2500);
+  };
+
   // Gerecht functions with Firestore
   const saveGerecht = async () => {
     if (!nieuwGerecht.naam.trim()) {
-      alert('Geef het gerecht een naam');
+      setGerechtError('Geef het gerecht een naam');
       return;
     }
     const validIngredients = nieuwGerecht.ingredienten.filter(
-      ing => ing.naam.trim() && ing.hoeveelheid
+      ing => ing.naam.trim()
     );
     if (validIngredients.length === 0) {
-      alert('Voeg minimaal één ingredient toe');
+      setGerechtError('Voeg minimaal één ingredient toe');
       return;
     }
 
+    setGerechtError('');
+    const naam = nieuwGerecht.naam;
     try {
       await addDoc(collection(db, 'families', familyId, 'gerechten'), {
-        naam: nieuwGerecht.naam,
+        naam,
         bereidingstijd: nieuwGerecht.bereidingstijd,
         ingredienten: validIngredients,
         createdAt: new Date().toISOString()
       });
-      
       setNieuwGerecht({
         naam: '',
         bereidingstijd: 30,
         ingredienten: [{ naam: '', hoeveelheid: '', eenheid: 'gram', winkel: 'Appie' }]
       });
-      setShowAddGerecht(false);
+      showToast(`✓ "${naam}" opgeslagen`);
     } catch (error) {
-      console.error('Error saving gerecht:', error);
-      alert('Fout bij opslaan');
+      setGerechtError(`Fout bij opslaan: ${error.message}`);
     }
   };
 
@@ -518,9 +523,9 @@ const familyId = userId;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Weekmenu laden...</p>
         </div>
       </div>
@@ -529,25 +534,19 @@ const familyId = userId;
 
   const renderMenuTab = () => (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-        <Calendar className="text-blue-600" />
+      <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+        <Calendar className="text-emerald-600" size={20} />
         Weekmenu Planning
       </h2>
       
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <p className="text-sm text-blue-800">
-          💡 <strong>Realtime sync:</strong> Wijzigingen worden direct gesynchroniseerd tussen alle apparaten!
-        </p>
-      </div>
-      
       <div className="space-y-5">
         {dagen.map(dag => (
-          <div key={dag} className="bg-white p-5 rounded-lg shadow-md border border-gray-200">
+          <div key={dag} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-800">{dag}</h3>
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">{dag}</h3>
               <button
                 onClick={() => addMaaltijd(dag)}
-                className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1 font-medium"
+                className="text-emerald-600 hover:text-emerald-700 text-xs flex items-center gap-1 font-semibold"
               >
                 <Plus size={16} />
                 Extra gerecht
@@ -556,12 +555,12 @@ const familyId = userId;
             
             <div className="space-y-3">
               {weekMenu[dag]?.maaltijden?.map((maaltijd, index) => (
-                <div key={index} className="flex gap-3 items-center bg-gray-50 p-3 rounded-lg">
+                <div key={index} className="flex gap-2 items-center bg-gray-50 p-3 rounded-xl">
                   <div className="flex-1">
                     <select
                       value={maaltijd.gerechtId || ''}
                       onChange={(e) => updateMaaltijd(dag, index, 'gerechtId', e.target.value || null)}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm transition"
                     >
                       <option value="">-- Kies een gerecht --</option>
                       {gerechten.map(gerecht => (
@@ -572,7 +571,7 @@ const familyId = userId;
                     </select>
                   </div>
                   
-                  <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-300">
+                  <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-gray-200">
                     <label className="text-sm text-gray-600 font-medium whitespace-nowrap">Personen:</label>
                     <select
                       value={maaltijd.aantalPersonen || 1}
@@ -586,7 +585,7 @@ const familyId = userId;
                     </select>
                   </div>
                   
-                  <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-300">
+                  <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-gray-200">
                     <input
                       type="time"
                       value={maaltijd.tijd || '18:00'}
@@ -616,13 +615,13 @@ const familyId = userId;
   const renderGerechtenTab = () => (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <ChefHat className="text-blue-600" />
+        <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <ChefHat className="text-emerald-600" size={20} />
           Gerechten Bibliotheek
         </h2>
         <button
           onClick={() => setShowAddGerecht(!showAddGerecht)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition"
+          className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm flex items-center gap-2 hover:bg-emerald-700 transition-colors font-semibold"
         >
           <Plus size={20} />
           Nieuw Gerecht
@@ -630,8 +629,8 @@ const familyId = userId;
       </div>
 
       {showAddGerecht && (
-        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-          <h3 className="text-lg font-semibold mb-4">Nieuw Gerecht Toevoegen</h3>
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <h3 className="text-base font-semibold text-gray-900 mb-4">Nieuw Gerecht Toevoegen</h3>
           
           <div className="space-y-4">
             <div>
@@ -640,7 +639,7 @@ const familyId = userId;
                 type="text"
                 value={nieuwGerecht.naam}
                 onChange={(e) => setNieuwGerecht({ ...nieuwGerecht, naam: e.target.value })}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm transition"
                 placeholder="Bijv. Lasagne"
               />
             </div>
@@ -651,7 +650,7 @@ const familyId = userId;
                 type="number"
                 value={nieuwGerecht.bereidingstijd}
                 onChange={(e) => setNieuwGerecht({ ...nieuwGerecht, bereidingstijd: parseInt(e.target.value) })}
-                className="w-32 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-32 px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm transition"
               />
             </div>
 
@@ -660,7 +659,7 @@ const familyId = userId;
                 <label className="block text-sm font-medium text-gray-700">Ingrediënten (per persoon)</label>
                 <button
                   onClick={addIngredientField}
-                  className="text-blue-600 text-sm flex items-center gap-1 hover:text-blue-700"
+                  className="text-emerald-600 text-sm flex items-center gap-1 hover:text-emerald-700"
                   type="button"
                 >
                   <Plus size={16} />
@@ -676,19 +675,19 @@ const familyId = userId;
                       value={ing.naam}
                       onChange={(e) => updateIngredient(index, 'naam', e.target.value)}
                       placeholder="Ingredient"
-                      className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm transition"
                     />
                     <input
                       type="number"
                       value={ing.hoeveelheid}
                       onChange={(e) => updateIngredient(index, 'hoeveelheid', parseFloat(e.target.value))}
                       placeholder="Aantal"
-                      className="w-20 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-20 px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm transition"
                     />
                     <select
                       value={ing.eenheid}
                       onChange={(e) => updateIngredient(index, 'eenheid', e.target.value)}
-                      className="w-24 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-24 px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm transition"
                     >
                       {eenheden.map(e => (
                         <option key={e} value={e}>{e}</option>
@@ -697,7 +696,7 @@ const familyId = userId;
                     <select
                       value={ing.winkel || 'Appie'}
                       onChange={(e) => updateIngredient(index, 'winkel', e.target.value)}
-                      className="w-28 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-28 px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm transition"
                     >
                       {winkels.map(w => (
                         <option key={w} value={w}>{w}</option>
@@ -717,20 +716,24 @@ const familyId = userId;
               </div>
             </div>
 
-            <div className="flex gap-2 pt-4">
+            {gerechtError && (
+              <p className="text-red-600 text-sm">{gerechtError}</p>
+            )}
+
+            <div className="flex gap-2 pt-2">
               <button
                 onClick={saveGerecht}
                 type="button"
-                className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
+                className="bg-emerald-600 text-white px-5 py-2 rounded-xl hover:bg-emerald-700 transition-colors text-sm font-semibold"
               >
                 Opslaan
               </button>
               <button
                 onClick={() => setShowAddGerecht(false)}
                 type="button"
-                className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition"
+                className="bg-gray-100 text-gray-600 px-5 py-2 rounded-xl hover:bg-gray-200 transition-colors text-sm font-medium"
               >
-                Annuleren
+                Sluiten
               </button>
             </div>
           </div>
@@ -742,7 +745,7 @@ const familyId = userId;
           const isEditing = editingGerechtId === gerecht.id;
           
           return (
-            <div key={gerecht.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <div key={gerecht.id} className="bg-white p-4 rounded-2xl border border-gray-100">
               <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
                   {isEditing ? (
@@ -751,14 +754,14 @@ const familyId = userId;
                         type="text"
                         value={gerecht.naam}
                         onChange={(e) => updateGerecht(gerecht.id, 'naam', e.target.value)}
-                        className="font-semibold text-lg text-gray-800 w-full p-1 border border-gray-300 rounded"
+                        className="font-semibold text-base text-gray-900 w-full px-2 py-1 border border-gray-200 rounded-lg text-sm"
                       />
                       <div className="flex items-center gap-2">
                         <input
                           type="number"
                           value={gerecht.bereidingstijd}
                           onChange={(e) => updateGerecht(gerecht.id, 'bereidingstijd', parseInt(e.target.value))}
-                          className="w-16 p-1 border border-gray-300 rounded text-sm"
+                          className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-sm"
                         />
                         <span className="text-sm text-gray-500">minuten</span>
                       </div>
@@ -781,7 +784,7 @@ const familyId = userId;
                   ) : (
                     <button
                       onClick={() => setEditingGerechtId(gerecht.id)}
-                      className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                      className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
                     >
                       Bewerk
                     </button>
@@ -807,18 +810,18 @@ const familyId = userId;
                             value={ing.naam}
                             onChange={(e) => updateGerechtIngredient(gerecht.id, idx, 'naam', e.target.value)}
                             placeholder="Ingredient"
-                            className="flex-1 p-1 border border-gray-300 rounded text-sm"
+                            className="flex-1 px-2 py-1 border border-gray-200 rounded-lg text-sm"
                           />
                           <input
                             type="number"
                             value={ing.hoeveelheid}
                             onChange={(e) => updateGerechtIngredient(gerecht.id, idx, 'hoeveelheid', parseFloat(e.target.value))}
-                            className="w-16 p-1 border border-gray-300 rounded text-sm"
+                            className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-sm"
                           />
                           <select
                             value={ing.eenheid}
                             onChange={(e) => updateGerechtIngredient(gerecht.id, idx, 'eenheid', e.target.value)}
-                            className="w-20 p-1 border border-gray-300 rounded text-sm"
+                            className="w-20 px-2 py-1 border border-gray-200 rounded-lg text-sm"
                           >
                             {eenheden.map(e => (
                               <option key={e} value={e}>{e}</option>
@@ -827,7 +830,7 @@ const familyId = userId;
                           <select
                             value={ing.winkel || 'Appie'}
                             onChange={(e) => updateGerechtIngredient(gerecht.id, idx, 'winkel', e.target.value)}
-                            className="w-24 p-1 border border-gray-300 rounded text-sm"
+                            className="w-24 px-2 py-1 border border-gray-200 rounded-lg text-sm"
                           >
                             {winkels.map(w => (
                               <option key={w} value={w}>{w}</option>
@@ -845,7 +848,7 @@ const familyId = userId;
                       ) : (
                         <div className="text-gray-600">
                           • {ing.naam}: {ing.hoeveelheid} {ing.eenheid}
-                          <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                          <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md">
                             {ing.winkel || 'Appie'}
                           </span>
                         </div>
@@ -855,7 +858,7 @@ const familyId = userId;
                   {isEditing && (
                     <button
                       onClick={() => addIngredientToGerecht(gerecht.id)}
-                      className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1 mt-2"
+                      className="text-emerald-600 hover:text-emerald-700 text-sm flex items-center gap-1 mt-2"
                     >
                       <Plus size={16} />
                       Ingredient toevoegen
@@ -885,8 +888,8 @@ const familyId = userId;
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center flex-wrap gap-3">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <ShoppingCart className="text-blue-600" />
+          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <ShoppingCart className="text-emerald-600" size={20} />
             Boodschappenlijst
           </h2>
           
@@ -895,7 +898,7 @@ const familyId = userId;
               onClick={() => setBoodschappenWeergave('categorie')}
               className={`px-4 py-2 rounded-md font-medium text-sm transition ${
                 boodschappenWeergave === 'categorie'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-white text-emerald-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
@@ -905,7 +908,7 @@ const familyId = userId;
               onClick={() => setBoodschappenWeergave('winkel')}
               className={`px-4 py-2 rounded-md font-medium text-sm transition ${
                 boodschappenWeergave === 'winkel'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-white text-emerald-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
@@ -916,14 +919,14 @@ const familyId = userId;
           <div className="flex gap-2">
             <button
               onClick={() => setShowAddBoodschap(true)}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm flex items-center gap-2"
+              className="bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center gap-2 font-semibold"
             >
               <Plus size={18} />
               Extra item
             </button>
             <button
               onClick={resetBoodschappenlijst}
-              className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition text-sm"
+              className="bg-gray-100 text-gray-600 px-4 py-2 rounded-xl hover:bg-gray-200 transition-colors text-sm font-medium"
             >
               Reset lijst
             </button>
@@ -931,26 +934,26 @@ const familyId = userId;
         </div>
 
         {totaalItems === 0 ? (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-            <p className="text-yellow-800">Plan eerst je weekmenu om een boodschappenlijst te genereren.</p>
+          <div className="bg-amber-50 border border-amber-100 rounded-2xl p-8 text-center">
+            <p className="text-amber-700 text-sm">Plan eerst je weekmenu om een boodschappenlijst te genereren.</p>
           </div>
         ) : (
           <>
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <div className="bg-white p-4 rounded-2xl border border-gray-100">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">Voortgang</span>
-                <span className="text-sm font-semibold text-blue-600">{afgevinkt} / {totaalItems}</span>
+                <span className="text-sm font-medium text-gray-600">Voortgang</span>
+                <span className="text-sm font-semibold text-emerald-600">{afgevinkt} / {totaalItems}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              <div className="w-full bg-gray-100 rounded-full h-1.5">
+                <div
+                  className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
                   style={{ width: `${totaalItems > 0 ? (afgevinkt / totaalItems) * 100 : 0}%` }}
                 ></div>
               </div>
             </div>
 
             {showAddBoodschap && (
-              <div className="bg-white p-5 rounded-lg shadow-md border border-gray-200">
+              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-semibold text-lg">Extra Boodschap Toevoegen</h3>
                   <button
@@ -990,7 +993,7 @@ const familyId = userId;
                           <button
                             key={idx}
                             onClick={() => addFromPreset(preset)}
-                            className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition text-sm text-left text-gray-700"
+                            className="px-3 py-2 bg-emerald-50 border border-blue-200 rounded-lg hover:bg-emerald-100 transition text-sm text-left text-gray-700"
                           >
                             {preset.naam}
                           </button>
@@ -1000,7 +1003,7 @@ const familyId = userId;
 
                     <button
                       onClick={() => setCustomInput(true)}
-                      className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 transition"
+                      className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-emerald-400 hover:text-emerald-600 transition"
                     >
                       + Aangepast item toevoegen
                     </button>
@@ -1013,13 +1016,13 @@ const familyId = userId;
                         value={nieuweBoodschap.naam}
                         onChange={(e) => setNieuweBoodschap({ ...nieuweBoodschap, naam: e.target.value })}
                         placeholder="bijv. Fruit, Cola, Boter..."
-                        className="flex-1 min-w-[200px] p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 min-w-[200px] px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm transition"
                         autoFocus
                       />
                       <select
                         value={nieuweBoodschap.categorie}
                         onChange={(e) => setNieuweBoodschap({ ...nieuweBoodschap, categorie: e.target.value })}
-                        className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm transition"
                       >
                         {categorieën.map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
@@ -1028,7 +1031,7 @@ const familyId = userId;
                       <select
                         value={nieuweBoodschap.winkel}
                         onChange={(e) => setNieuweBoodschap({ ...nieuweBoodschap, winkel: e.target.value })}
-                        className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-sm transition"
                       >
                         {winkels.map(w => (
                           <option key={w} value={w}>{w}</option>
@@ -1038,13 +1041,13 @@ const familyId = userId;
                     <div className="flex gap-2">
                       <button
                         onClick={addExtraBoodschap}
-                        className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
+                        className="bg-emerald-600 text-white px-5 py-2 rounded-xl hover:bg-emerald-700 transition-colors text-sm font-semibold"
                       >
                         Toevoegen
                       </button>
                       <button
                         onClick={() => setCustomInput(false)}
-                        className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition"
+                        className="bg-gray-100 text-gray-600 px-5 py-2 rounded-xl hover:bg-gray-200 transition-colors text-sm font-medium"
                       >
                         Terug
                       </button>
@@ -1061,8 +1064,8 @@ const familyId = userId;
                   if (items.length === 0) return null;
 
                   return (
-                    <div key={categorie} className="bg-white p-5 rounded-lg shadow-md border border-gray-200">
-                      <h3 className="font-bold text-lg text-gray-800 mb-3 pb-2 border-b border-gray-200">
+                    <div key={categorie} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                      <h3 className="font-semibold text-sm text-gray-500 mb-3 pb-2 border-b border-gray-100 uppercase tracking-wide">
                         {categorie}
                       </h3>
                       <div className="space-y-2">
@@ -1081,7 +1084,7 @@ const familyId = userId;
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={() => toggleAfvinken(item.key)}
-                                className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                className="w-5 h-5 text-emerald-600 rounded focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                               />
                               
                               {isEditingThis ? (
@@ -1090,7 +1093,7 @@ const familyId = userId;
                                     type="text"
                                     value={item.naam}
                                     onChange={(e) => updateExtraBoodschap(item.id, 'naam', e.target.value)}
-                                    className="flex-1 p-1 border border-gray-300 rounded text-sm"
+                                    className="flex-1 px-2 py-1 border border-gray-200 rounded-lg text-sm"
                                   />
                                   <button
                                     onClick={() => setEditingBoodschapKey(null)}
@@ -1124,7 +1127,7 @@ const familyId = userId;
                                 <>
                                   <button
                                     onClick={() => setEditingBoodschapKey(item.key)}
-                                    className="text-blue-500 hover:text-blue-700 text-xs px-2"
+                                    className="text-emerald-500 hover:text-emerald-700 text-xs px-2"
                                   >
                                     ✎
                                   </button>
@@ -1158,8 +1161,8 @@ const familyId = userId;
                   if (!hasItems) return null;
 
                   return (
-                    <div key={winkel} className="bg-white p-5 rounded-lg shadow-md border-2 border-gray-300">
-                      <h2 className={`font-bold text-xl mb-4 pb-3 border-b-2 ${
+                    <div key={winkel} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                      <h2 className={`font-bold text-base mb-4 pb-3 border-b-2 ${
                         winkel === 'Visboer' ? 'text-blue-700 border-blue-200' :
                         winkel === 'Slager' ? 'text-red-700 border-red-200' :
                         winkel === 'Netto' ? 'text-yellow-700 border-yellow-200' :
@@ -1190,7 +1193,7 @@ const familyId = userId;
                                       type="checkbox"
                                       checked={isChecked}
                                       onChange={() => toggleAfvinken(item.key)}
-                                      className="w-5 h-5 text-blue-600 rounded cursor-pointer"
+                                      className="w-5 h-5 text-emerald-600 rounded cursor-pointer"
                                     />
                                     <span className={`flex-1 ${isChecked ? 'line-through text-gray-500' : 'text-gray-800'}`}>
                                       {item.naam}
@@ -1227,63 +1230,71 @@ const familyId = userId;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen bg-stone-50 p-4">
+      {toast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-medium px-5 py-2.5 rounded-full shadow-lg">
+          {toast}
+        </div>
+      )}
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">🍽️ Weekmenu Planner</h1>
-              <p className="text-gray-600">Realtime gesynchroniseerd tussen alle apparaten</p>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-5">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🍽️</span>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 leading-tight">Weekmenu Planner</h1>
+                <p className="text-xs text-gray-400">Realtime gesynchroniseerd</p>
+              </div>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 transition"
+              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-600 px-3 py-2 rounded-xl hover:bg-red-50 transition-colors"
             >
-              <LogOut size={16} />
+              <LogOut size={15} />
               Uitloggen
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-lg mb-6">
-          <div className="flex border-b border-gray-200">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-5 overflow-hidden">
+          <div className="flex">
             <button
               onClick={() => setActiveTab('menu')}
-              className={`flex-1 py-4 px-6 font-medium transition ${
+              className={`flex-1 py-3.5 px-4 text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
                 activeTab === 'menu'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                  ? 'text-emerald-700 bg-emerald-50 border-b-2 border-emerald-500'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 border-b-2 border-transparent'
               }`}
             >
-              <Calendar className="inline mr-2" size={20} />
+              <Calendar size={17} />
               Weekmenu
             </button>
             <button
               onClick={() => setActiveTab('gerechten')}
-              className={`flex-1 py-4 px-6 font-medium transition ${
+              className={`flex-1 py-3.5 px-4 text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
                 activeTab === 'gerechten'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                  ? 'text-emerald-700 bg-emerald-50 border-b-2 border-emerald-500'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 border-b-2 border-transparent'
               }`}
             >
-              <ChefHat className="inline mr-2" size={20} />
+              <ChefHat size={17} />
               Gerechten
             </button>
             <button
               onClick={() => setActiveTab('boodschappen')}
-              className={`flex-1 py-4 px-6 font-medium transition ${
+              className={`flex-1 py-3.5 px-4 text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
                 activeTab === 'boodschappen'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                  ? 'text-emerald-700 bg-emerald-50 border-b-2 border-emerald-500'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 border-b-2 border-transparent'
               }`}
             >
-              <ShoppingCart className="inline mr-2" size={20} />
+              <ShoppingCart size={17} />
               Boodschappen
             </button>
           </div>
         </div>
 
-        <div className="bg-gray-50 rounded-lg shadow-lg p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           {activeTab === 'menu' && renderMenuTab()}
           {activeTab === 'gerechten' && renderGerechtenTab()}
           {activeTab === 'boodschappen' && renderBoodschappenTab()}
