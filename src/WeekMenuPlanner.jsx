@@ -57,17 +57,17 @@ const WeekMenuPlanner = ({ userId }) => {
   ];
 
   const voorgesteldeItems = [
-    { naam: 'Bananen', categorie: 'Groente & Fruit', winkel: 'Appie' },
-    { naam: 'Appels', categorie: 'Groente & Fruit', winkel: 'Appie' },
-    { naam: 'Sinaasappels', categorie: 'Groente & Fruit', winkel: 'Appie' },
-    { naam: 'Melk', categorie: 'Zuivel & Eieren', winkel: 'Appie' },
-    { naam: 'Yoghurt', categorie: 'Zuivel & Eieren', winkel: 'Appie' },
-    { naam: 'Kaas', categorie: 'Zuivel & Eieren', winkel: 'Appie' },
-    { naam: 'Eieren', categorie: 'Zuivel & Eieren', winkel: 'Appie' },
-    { naam: 'Boter', categorie: 'Zuivel & Eieren', winkel: 'Appie' },
-    { naam: 'Brood', categorie: 'Brood & Bakkerij', winkel: 'Appie' },
-    { naam: 'Cola', categorie: 'Dranken', winkel: 'Appie' },
-    { naam: 'Chips', categorie: 'Snacks & Snoep', winkel: 'Appie' },
+    { naam: 'Bananen', categorie: 'Groente & Fruit', winkel: 'Netto' },
+    { naam: 'Appels', categorie: 'Groente & Fruit', winkel: 'Netto' },
+    { naam: 'Sinaasappels', categorie: 'Groente & Fruit', winkel: 'Netto' },
+    { naam: 'Melk', categorie: 'Zuivel & Eieren', winkel: 'Netto' },
+    { naam: 'Yoghurt', categorie: 'Zuivel & Eieren', winkel: 'Netto' },
+    { naam: 'Kaas', categorie: 'Zuivel & Eieren', winkel: 'Netto' },
+    { naam: 'Eieren', categorie: 'Zuivel & Eieren', winkel: 'Netto' },
+    { naam: 'Boter', categorie: 'Zuivel & Eieren', winkel: 'Netto' },
+    { naam: 'Brood', categorie: 'Brood & Bakkerij', winkel: 'Netto' },
+    { naam: 'Cola', categorie: 'Dranken', winkel: 'Netto' },
+    { naam: 'Chips', categorie: 'Snacks & Snoep', winkel: 'Netto' },
   ];
 
   // Get current user's family ID
