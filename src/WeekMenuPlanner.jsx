@@ -400,7 +400,9 @@ const familyId = userId;
   };
 
   const verwijderBoodschap = (key) => {
-    setVerwijderdeBoodschappen([...verwijderdeBoodschappen, key]);
+    if (!afgevinkteBoodschappen.includes(key)) {
+      setAfgevinkteBoodschappen([...afgevinkteBoodschappen, key]);
+    }
   };
 
   const herstelBoodschap = (key) => {
@@ -483,7 +485,7 @@ const familyId = userId;
     });
 
     const filtered = Object.entries(lijst)
-      .filter(([key]) => !verwijderdeBoodschappen.includes(key))
+      .filter(([key, item]) => item.bron === 'extra' ? !verwijderdeBoodschappen.includes(key) : true)
       .map(([key, item]) => ({ ...item, key }));
 
     const groupedByCategory = {};
