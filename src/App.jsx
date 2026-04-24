@@ -1,22 +1,70 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './Firebase';
+import { auth, db } from './Firebase';
+import { doc, onSnapshot, setDoc, collection, getDoc } from 'firebase/firestore';
 import Login from './Login';
 import WeekMenuPlanner from './WeekMenuPlanner';
 import './App.css';
 
+const generateFamilyCode = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+};
+
 function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // undefined = auth nog niet gecontroleerd, null = niet ingelogd
+  const [user, setUser] = useState(undefined);
+  const [familyId, setFamilyId] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
+    const unsub = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser ?? null);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    if (user === undefined || user === null) {
+      if (user === null) setFamilyId(null);
+      return;
+    }
+
+    const userRef = doc(db, 'users', user.uid);
+
+    const unsub = onSnapshot(userRef, async (snap) => {
+      if (snap.exists() && snap.data().familyId) {
+        setFamilyId(snap.data().familyId);
+        return;
+      }
+
+      // Nieuwe gebruiker of bestaande gebruiker zonder gezinsdocument:
+      // gebruik userId als familyId zodat bestaande data bewaard blijft.
+      const assignedFamilyId = user.uid;
+      const familyRef = doc(db, 'families', assignedFamilyId);
+      const familySnap = await getDoc(familyRef);
+
+      let familyCode;
+      if (familySnap.exists() && familySnap.data().familyCode) {
+        familyCode = familySnap.data().familyCode;
+      } else {
+        familyCode = generateFamilyCode();
+        await setDoc(familyRef, {
+          members: [user.uid],
+          familyCode,
+          createdAt: new Date().toISOString(),
+          createdBy: user.uid,
+        }, { merge: true });
+        await setDoc(doc(db, 'familyCodes', familyCode), { familyId: assignedFamilyId });
+      }
+
+      await setDoc(userRef, { familyId: assignedFamilyId });
+      // onSnapshot vuurt opnieuw, dan wordt familyId gezet via de bovenste if
     });
 
-    return () => unsubscribe();
-  }, []);
+    return () => unsub();
+  }, [user]);
+
+  const loading = user === undefined || (user !== null && familyId === null);
 
   if (loading) {
     return (
@@ -31,8 +79,8 @@ function App() {
 
   return (
     <>
-      {user ? (
-        <WeekMenuPlanner userId={user.uid} userEmail={user.email} />
+      {user && familyId ? (
+        <WeekMenuPlanner userId={user.uid} familyId={familyId} userEmail={user.email} />
       ) : (
         <Login />
       )}

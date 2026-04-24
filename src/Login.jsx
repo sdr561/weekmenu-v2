@@ -21,7 +21,18 @@ const Login = () => {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (err) {
-      setError(err.message || 'Er ging iets mis');
+      const errorMessages = {
+        'auth/invalid-credential': 'Onjuist e-mailadres of wachtwoord',
+        'auth/invalid-email': 'Ongeldig e-mailadres',
+        'auth/user-not-found': 'Geen account gevonden met dit e-mailadres',
+        'auth/wrong-password': 'Onjuist wachtwoord',
+        'auth/email-already-in-use': 'Dit e-mailadres is al in gebruik',
+        'auth/weak-password': 'Wachtwoord moet minimaal 6 tekens bevatten',
+        'auth/too-many-requests': 'Te veel mislukte pogingen. Probeer het later opnieuw',
+        'auth/network-request-failed': 'Netwerkfout. Controleer je verbinding',
+        'auth/user-disabled': 'Dit account is uitgeschakeld',
+      };
+      setError(errorMessages[err.code] ?? 'Er ging iets mis. Probeer het opnieuw');
     } finally {
       setLoading(false);
     }

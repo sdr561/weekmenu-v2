@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, ShoppingCart, ChefHat, Calendar, LogOut } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, ChefHat, Calendar, LogOut, Users, Copy } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import {
   collection,
@@ -8,11 +8,13 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  setDoc
+  setDoc,
+  getDoc,
+  arrayUnion
 } from 'firebase/firestore';
 import { auth, db } from './Firebase';
 
-const WeekMenuPlanner = ({ userId }) => {
+const WeekMenuPlanner = ({ userId, familyId }) => {
   const [gerechten, setGerechten] = useState([]);
   const [weekMenu, setWeekMenu] = useState({});
   const [activeTab, setActiveTab] = useState('menu');
@@ -70,8 +72,11 @@ const WeekMenuPlanner = ({ userId }) => {
     { naam: 'Chips', categorie: 'Snacks & Snoep', winkel: 'Netto' },
   ];
 
-  // Get current user's family ID
-const familyId = userId;  
+  const [familyCode, setFamilyCode] = useState(null);
+  const [showFamilyModal, setShowFamilyModal] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [joinError, setJoinError] = useState('');
+  const [joinLoading, setJoinLoading] = useState(false);
 
   // Realtime listeners for Firestore
   useEffect(() => {
@@ -124,6 +129,45 @@ const familyId = userId;
       unsubBoodschappen();
     };
   }, [familyId]);
+
+  // Haal gezinscode op
+  useEffect(() => {
+    if (!familyId) return;
+    getDoc(doc(db, 'families', familyId)).then((snap) => {
+      if (snap.exists()) setFamilyCode(snap.data().familyCode || null);
+    });
+  }, [familyId]);
+
+  // Koppel aan bestaand gezin via gezinscode
+  const handleJoinFamily = async () => {
+    const code = joinCode.trim().toUpperCase();
+    if (code.length !== 6) return;
+    setJoinLoading(true);
+    setJoinError('');
+    try {
+      const codeSnap = await getDoc(doc(db, 'familyCodes', code));
+      if (!codeSnap.exists()) {
+        setJoinError('Gezinscode niet gevonden');
+        return;
+      }
+      const targetFamilyId = codeSnap.data().familyId;
+      if (targetFamilyId === familyId) {
+        setJoinError('Je maakt al deel uit van dit gezin');
+        return;
+      }
+      await updateDoc(doc(db, 'families', targetFamilyId), {
+        members: arrayUnion(userId),
+      });
+      await setDoc(doc(db, 'users', userId), { familyId: targetFamilyId });
+      setShowFamilyModal(false);
+      setJoinCode('');
+      showToast('Gezin gekoppeld!');
+    } catch {
+      setJoinError('Er ging iets mis. Probeer het opnieuw.');
+    } finally {
+      setJoinLoading(false);
+    }
+  };
 
   // Auto-categorize and detect shop
   const getCategorieVoorIngredient = (ingredientNaam) => {
@@ -1253,6 +1297,61 @@ const familyId = userId;
           {toast}
         </div>
       )}
+
+      {showFamilyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-lg font-bold text-gray-900">Gezin koppelen</h2>
+              <button
+                onClick={() => { setShowFamilyModal(false); setJoinCode(''); setJoinError(''); }}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mb-5">
+              <p className="text-sm font-medium text-gray-700 mb-2">Jouw gezinscode</p>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 font-mono text-xl font-bold text-emerald-700 text-center tracking-widest">
+                  {familyCode || '...'}
+                </div>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(familyCode); showToast('Code gekopieerd!'); }}
+                  className="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition"
+                  title="Kopieer code"
+                >
+                  <Copy size={16} />
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">Deel deze code met je partner zodat jullie hetzelfde weekmenu zien.</p>
+            </div>
+
+            <div className="border-t border-gray-100 pt-5">
+              <p className="text-sm font-medium text-gray-700 mb-2">Koppel aan bestaand gezin</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  placeholder="Code van partner"
+                  maxLength={6}
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-xl font-mono text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                />
+                <button
+                  onClick={handleJoinFamily}
+                  disabled={joinLoading || joinCode.length < 6}
+                  className="bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-semibold"
+                >
+                  {joinLoading ? '...' : 'Koppelen'}
+                </button>
+              </div>
+              {joinError && <p className="text-red-600 text-sm mt-2">{joinError}</p>}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-5">
           <div className="flex justify-between items-center">
@@ -1263,13 +1362,23 @@ const familyId = userId;
                 <p className="text-xs text-gray-400">Realtime gesynchroniseerd</p>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-600 px-3 py-2 rounded-xl hover:bg-red-50 transition-colors"
-            >
-              <LogOut size={15} />
-              Uitloggen
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowFamilyModal(true)}
+                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-emerald-600 px-3 py-2 rounded-xl hover:bg-emerald-50 transition-colors"
+                title="Gezin koppelen"
+              >
+                <Users size={15} />
+                Gezin
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-600 px-3 py-2 rounded-xl hover:bg-red-50 transition-colors"
+              >
+                <LogOut size={15} />
+                Uitloggen
+              </button>
+            </div>
           </div>
         </div>
 
