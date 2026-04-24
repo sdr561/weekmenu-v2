@@ -39,26 +39,27 @@ function App() {
 
       // Nieuwe gebruiker of bestaande gebruiker zonder gezinsdocument:
       // gebruik userId als familyId zodat bestaande data bewaard blijft.
-      const assignedFamilyId = user.uid;
-      const familyRef = doc(db, 'families', assignedFamilyId);
-      const familySnap = await getDoc(familyRef);
+      try {
+        const assignedFamilyId = user.uid;
+        const familyRef = doc(db, 'families', assignedFamilyId);
+        const familySnap = await getDoc(familyRef);
 
-      let familyCode;
-      if (familySnap.exists() && familySnap.data().familyCode) {
-        familyCode = familySnap.data().familyCode;
-      } else {
-        familyCode = generateFamilyCode();
-        await setDoc(familyRef, {
-          members: [user.uid],
-          familyCode,
-          createdAt: new Date().toISOString(),
-          createdBy: user.uid,
-        }, { merge: true });
-        await setDoc(doc(db, 'familyCodes', familyCode), { familyId: assignedFamilyId });
+        if (!familySnap.exists() || !familySnap.data().familyCode) {
+          const familyCode = generateFamilyCode();
+          await setDoc(familyRef, {
+            members: [user.uid],
+            familyCode,
+            createdAt: new Date().toISOString(),
+            createdBy: user.uid,
+          }, { merge: true });
+          await setDoc(doc(db, 'familyCodes', familyCode), { familyId: assignedFamilyId });
+        }
+
+        await setDoc(userRef, { familyId: assignedFamilyId });
+        // onSnapshot vuurt opnieuw, dan wordt familyId gezet via de bovenste if
+      } catch (err) {
+        console.error('Fout bij gezin aanmaken:', err);
       }
-
-      await setDoc(userRef, { familyId: assignedFamilyId });
-      // onSnapshot vuurt opnieuw, dan wordt familyId gezet via de bovenste if
     });
 
     return () => unsub();
